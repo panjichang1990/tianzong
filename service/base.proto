@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+
+option go_package = "./;service";
+
+
+message MenuInfo {
+  string Uri =1 ;
+  string Name = 2;
+  string Desc = 3;
+  string ParentUri = 4;
+}
+
+message PublishInfo {
+  string Topic = 1;
+  map<string,string> Header  = 2;
+  string Body = 3;
+}
+
+message PublishRep{
+  int32 Code = 1;
+  string Msg = 2;
+}

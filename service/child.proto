@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+
+option go_package = "./;service";
+import public "base.proto";
+
+service Child {
+  rpc Do(DoReq) returns(DoRep){}
+  rpc ReloadChannel(ReloadChannelReq) returns(ReloadRep){}
+  rpc Publish(PublishInfo) returns(PublishRep){}
+
+}
+
+message Value {
+  repeated string V = 1;
+}
+
+message DoReq{
+  int32 AdminId = 1;
+  string AdminName = 2;
+  int32 AdminType = 3;
+  string Uri = 5;//用于区分处理方法
+  string AdminJson = 6;
+  map<string,Value> Header = 7;
+  map<string,Value> Query = 8;
+  map<string,Value> PostForm = 9;
+  string Body = 10;
+}
+
+
+message DoRep{
+  int32 Code = 1;
+  string Msg = 2;
+  string Body = 3;
+  map<string,string> Header = 4;
+  string ContentType = 5;
+}
+
+message ReloadItemReq {
+  int32 GameId = 1 ;
+}
+
+message ReloadChannelReq{
+  int32 GameId = 1 ;
+}
+
+message ReloadZoneReq{
+  int32 GameId = 1;
+}
+
+message ReloadRep{
+  int32 Code = 1;
+  string Msg = 2;
+}

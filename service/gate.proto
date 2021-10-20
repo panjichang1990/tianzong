@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+//protoc   --go_out=. gate.proto
+//protoc --go-grpc_out=. gate.proto
+option go_package = "./;service";
+import public "base.proto";
+
+service Gate {
+  rpc RegisterClient(RegisterClientReq) returns (RegisterRep){} //子服务注册
+  rpc DisRegisterClient(DisRegisterClientReq) returns (RegisterRep){} //子服务注册
+  rpc RegisterMenu(RegisterMenuReq) returns (RegisterRep){}
+  rpc Ping(PingReq) returns(PingRep){}
+  rpc ClearAuth(ClearAuthReq) returns (ClearAuthRep){}
+}
+
+
+message ClearAuthReq {
+  int32 AdminId = 1;
+}
+
+message ClearAuthRep{
+  int32 Code = 1;
+}
+
+message PingReq {
+  string Address = 1;
+}
+
+message PingRep{
+  bool isRegister = 1;
+}
+
+message RegisterRep {
+  int32 Code = 1;
+  string Msg = 2;
+}
+
+//注册客户端
+message RegisterClientReq {
+  int32 GameId =1;
+  string Address = 2; //服务器地址
+  repeated string Events =4 ;//注册监听事件
+}
+
+
+message DisRegisterClientReq{
+  int32 GameId =1;
+  string Address=2;
+}
+
+
+//注册路由
+message RegisterMenuReq {
+  int32 GameId = 1;
+  string Address=2;
+  repeated MenuInfo Data = 3;
+}
+
+//注册区服
+message RegisterZoneReq {
+  int32  GameId = 1;
+  int32 ZoneId = 2;
+  string ZoneName = 3;
+  bool IsGrey = 4 ; //是否是灰度服
+}
+
+
+//注册道具
+message RegisterItemReq {
+  int32 GameId = 1;
+  repeated ItemInfo Data = 2;
+}
+
+//注册商品
+
+message RegisterMallReq {
+  int32 GameId = 1;
+  repeated MallInfo Data = 2;
+}
+
+
+message GetRep {
+  int32 GameId =1;
+}
+
+//渠道返回值
+
+message GetChannelRep{
+  int32 Code =1;
+  string Msg = 2;
+  repeated  ChannelInfo Data = 3;
+}
+
+//渠道属性返回
+message GetAttrRep  {
+  int32 Code =1;
+  string Msg = 2;
+  repeated  AttrInfo Data = 3;
+}
+
+//渠道类型返回
+
+message GetTypeRep  {
+  int32 Code =1;
+  string Msg = 2;
+  repeated  TypeInfo Data = 3;
+}

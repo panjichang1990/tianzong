@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+option go_package = "./;service";
+
+service Auth {
+  rpc Check (CheckReq) returns (CheckRep){}
+  rpc Logout (LogoutReq) returns (LogoutRep){}
+  rpc AuthRegister(AuthRegisterReq) returns (AuthRegisterRep){}
+  rpc AuthDisRegister(AuthRegisterReq) returns (AuthRegisterRep) {}
+  rpc Ping(AuthPingReq) returns (AuthPingRep){}
+}
+
+message AuthRegisterReq {
+  string Address =1;
+}
+
+message AuthRegisterRep{
+  int32 Code =1 ;
+}
+
+message CheckReq {
+  string Token = 1;
+  int32 ProjectId = 2;
+  int32 AdminId = 3;
+  string Address = 4;
+}
+
+message CheckRep {
+  int32 Code = 1; //0 失败  1正常
+  string Msg = 2;
+  AdminInfo Data = 3;
+}
+
+message AdminInfo {
+  int32 AdminId = 1;
+  string AdminName = 2;
+  string Header = 3;
+}
+
+message LogoutReq {
+  int32 AdminId = 1;
+  string Token = 2;
+}
+
+message LogoutRep {
+  int32 Code = 1 ;
+  string Msg = 2;
+}
+
+
+message AuthPingReq {
+  string Address = 1;
+}
+
+message AuthPingRep{
+  bool isRegister = 1;
+}
