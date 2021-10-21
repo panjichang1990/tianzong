@@ -4,12 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/panjichang1990/tianzong"
-	"github.com/panjichang1990/tianzong/constant"
-	"github.com/panjichang1990/tianzong/helper"
-	"github.com/panjichang1990/tianzong/service"
-	"github.com/panjichang1990/tianzong/session"
-	"github.com/panjichang1990/tianzong/tzlog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"io/ioutil"
@@ -18,6 +12,12 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"tianzong"
+	"tianzong/constant"
+	"tianzong/helper"
+	"tianzong/service"
+	"tianzong/session"
+	"tianzong/tzlog"
 	"time"
 )
 
@@ -60,7 +60,7 @@ type mGate struct {
 	//http监听端口 默认 DefaultHttpPort
 	HttpPort    int
 	Host        string
-	handler     IGate
+	handler     tianzong.IGate
 	adminCache  *sync.Map
 	authAddress string
 	authConn    *grpc.ClientConn
@@ -68,12 +68,6 @@ type mGate struct {
 
 func (g *mGate) getAddress() string {
 	return fmt.Sprintf("%v:%v", g.Host, g.TcpPort)
-}
-
-type IGate interface {
-	OnClientReg(clientAddress string) //子服务注册触发
-	OnMenuRegister(uri string)        //路由注册触发
-	GetAdmin(adminId int32) tianzong.IAdmin
 }
 
 type RouteKey struct {
@@ -340,6 +334,14 @@ func (g *mGate) beforeRun() {
 						g.menuTree[v.Uri] = make([]string, 0)
 					}
 					g.menuTree[v.Uri] = append(g.menuTree[v.Uri], m.Address)
+					if g.handler != nil {
+						g.handler.OnMenuRegister(tianzong.RouteInfo{
+							Uri:       v.Uri,
+							ParentUri: v.ParentUri,
+							Name:      v.Name,
+							Desc:      v.Desc,
+						})
+					}
 				}
 
 			}
@@ -397,7 +399,9 @@ func (g *mGate) Run() {
 			return
 		}
 	}()
-	g.web = gin.New()
+	if g.web == nil {
+		g.web = gin.New()
+	}
 	g.web.NoRoute(g.Center)
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%v", g.HttpPort),
@@ -542,10 +546,12 @@ func routerPath(pth string) string {
 
 var defaultGate = new(mGate)
 
-func RegisterGateHandler(handler IGate) {
+//RegisterGateHandler 注册网关实例
+func RegisterGateHandler(handler tianzong.IGate) {
 	defaultGate.handler = handler
 }
 
+//RegisterGateHandler 注册网关http实例
 func RegisterGateWebHandler(handler *gin.Engine) {
 	defaultGate.web = handler
 }
@@ -554,14 +560,17 @@ func Run() {
 	defaultGate.Run()
 }
 
+//SetHttpPort 设置http监听端口
 func SetHttpPort(port int) {
 	defaultGate.HttpPort = port
 }
 
+//SetTcpPort 设置TCP监听端口
 func SetTcpPort(port int) {
 	defaultGate.TcpPort = port
 }
 
+//SetAuthAddress 登录服务器地址
 func SetAuthAddress(address string) {
 	defaultGate.authAddress = address
 }

@@ -3,13 +3,13 @@ package child
 import (
 	"context"
 	"fmt"
-	"github.com/panjichang1990/tianzong"
-	"github.com/panjichang1990/tianzong/constant"
-	"github.com/panjichang1990/tianzong/service"
-	"github.com/panjichang1990/tianzong/tzlog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"net"
+	"tianzong"
+	"tianzong/constant"
+	"tianzong/service"
+	"tianzong/tzlog"
 	"time"
 )
 

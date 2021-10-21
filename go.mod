@@ -1,4 +1,4 @@
-module github.com/panjichang1990/tianzong
+module tianzong
 
 go 1.17
 
