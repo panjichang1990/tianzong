@@ -2,9 +2,9 @@ package session
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/panjichang1990/tianzong/session/driver"
+	"github.com/panjichang1990/tianzong/tzlog"
 	"path/filepath"
-	"tianzong/session/driver"
-	"tianzong/tzlog"
 )
 
 var globalSessions *driver.Manager
