@@ -6,9 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/panjichang1990/tianzong"
 	"github.com/panjichang1990/tianzong/constant"
-	"github.com/panjichang1990/tianzong/helper"
 	"github.com/panjichang1990/tianzong/service"
-	"github.com/panjichang1990/tianzong/session"
 	"github.com/panjichang1990/tianzong/tzlog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -244,7 +242,12 @@ func (g *mGate) MPublish(topic string, header map[string]string, body string) {
 }
 
 func (g *mGate) afterRun() {
-
+	conn := g.getAuthConn()
+	if conn != nil {
+		_, _ = conn.AuthDisRegister(context.Background(), &service.AuthRegisterReq{
+			Address: g.getAddress(),
+		})
+	}
 }
 
 func (g *mGate) beforeRun() {
@@ -347,13 +350,11 @@ func (g *mGate) beforeRun() {
 			}
 		}
 	}()
-
-	session.Init()
 	go g.ping()
 }
 
 func (g *mGate) registerToAuth() {
-	tzlog.I("注册至auth", g.authAddress)
+	tzlog.I("注册至auth %v", g.authAddress)
 	auth := g.getAuthConn()
 	if auth == nil {
 		return
@@ -372,7 +373,7 @@ func (g *mGate) ping() {
 		Address: g.getAddress(),
 	})
 	if err != nil {
-		tzlog.I("ping auth fail ", err)
+		tzlog.I("ping auth fail %v", err)
 	} else {
 		if !rep.IsRegister {
 			g.registerToAuth()
@@ -382,9 +383,10 @@ func (g *mGate) ping() {
 }
 
 func (g *mGate) Run() {
+	defer g.afterRun()
 	g.beforeRun()
 	go func() {
-		tzlog.I("tcp run ", g.TcpPort)
+		tzlog.I("tcp run %v", g.TcpPort)
 		lis, err := net.Listen("tcp", fmt.Sprintf(":%v", g.TcpPort))
 		if err != nil {
 			fmt.Printf("监听端口失败: %s", err)
@@ -407,7 +409,7 @@ func (g *mGate) Run() {
 		Addr:    fmt.Sprintf(":%v", g.HttpPort),
 		Handler: g.web,
 	}
-	tzlog.I("http run ", g.HttpPort)
+	tzlog.I("http run %v", g.HttpPort)
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		tzlog.E("http服务启动异常 %v", err)
 	}
@@ -420,16 +422,20 @@ func (g *mGate) context() context.Context {
 }
 
 func (g *mGate) checkAuth(ctx *gin.Context) (int, *gateAuth, string) {
-	sess := session.Get(ctx)
-	token := helper.GetString(sess.Get(tokenName))
-	id := helper.GetInt32(sess.Get(idName))
+	//sess := session.Get(ctx)
+	//token := helper.GetString(sess.Get(tokenName))
+	//id := helper.GetInt32(sess.Get(idName))
+	authInfo := g.handler.GetAuthInfo(ctx)
+	if authInfo == nil {
+		return constant.NeedLoginCode, nil, constant.NeedLoginMsg
+	}
 	//token := ctx.Request.Header.Get(tokenName)
-	if v, ok := g.adminCache.Load(id); ok {
+	if v, ok := g.adminCache.Load(authInfo.AdminId); ok {
 		if info, ok1 := v.(*gateAuth); ok1 {
 			if !info.checkIp(ctx.ClientIP()) {
 				return constant.NeedLoginCode, nil, constant.NeedLoginMsg
 			}
-			if !info.checkToken(token) {
+			if !info.checkToken(authInfo.AdminToken) {
 				return constant.NeedLoginCode, nil, constant.NeedLoginMsg
 			}
 			return constant.SuccessCode, info, ""
@@ -440,9 +446,9 @@ func (g *mGate) checkAuth(ctx *gin.Context) (int, *gateAuth, string) {
 		return constant.SysAuthErr, nil, constant.SysErrMsg
 	}
 	rep, err := conn.Check(context.Background(), &service.CheckReq{
-		Token:     token,
+		Token:     authInfo.AdminToken,
 		ProjectId: g.ProjectId,
-		AdminId:   id,
+		AdminId:   authInfo.AdminId,
 		Address:   fmt.Sprintf("%v:%v", g.Host, g.TcpPort),
 	})
 	if err != nil {
@@ -456,11 +462,11 @@ func (g *mGate) checkAuth(ctx *gin.Context) (int, *gateAuth, string) {
 		adminId:        rep.Data.AdminId,
 		adminName:      rep.Data.AdminName,
 		activeIp:       ctx.ClientIP(),
-		token:          token,
+		token:          authInfo.AdminToken,
 		lastActiveTime: time.Now().Unix(),
 	}
-	_ = sess.Set(idName, id)
-	_ = sess.Set(tokenName, token)
+	//_ = sess.Set(idName, id)
+	//_ = sess.Set(tokenName, token)
 	return constant.SuccessCode, info, ""
 }
 

@@ -2,10 +2,10 @@ package tianzong
 
 import (
 	"encoding/json"
-	"tianzong/constant"
-	"tianzong/helper"
-	"tianzong/service"
-	"tianzong/tzlog"
+	"github.com/panjichang1990/tianzong/constant"
+	"github.com/panjichang1990/tianzong/helper"
+	"github.com/panjichang1990/tianzong/service"
+	"github.com/panjichang1990/tianzong/tzlog"
 )
 
 type Context struct {

@@ -2,10 +2,6 @@ package gate
 
 import "time"
 
-const tokenName = `tz_token`
-
-const idName = `tz_id`
-
 type gateAuth struct {
 	adminId        int32  //管理员ID
 	adminName      string //管理员姓名

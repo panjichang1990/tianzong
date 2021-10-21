@@ -73,12 +73,12 @@ type MAuth struct {
 }
 
 func (ma *MAuth) GetAdmin(id int32) IAuthAdmin {
-	tzlog.I("获取角色信息", id)
+	tzlog.I("获取角色信息 %v", id)
 	return nil
 }
 
 func (ma *MAuth) Logout(id int32) {
-	tzlog.I("账号退出", id)
+	tzlog.I("账号退出 %v", id)
 }
 
 func (a *mAuth) clearGateCache(id int32, withOut string) {
@@ -138,7 +138,7 @@ func (a *mAuth) Logout(_ context.Context, in *service.LogoutReq) (*service.Logou
 }
 
 func (a *mAuth) AuthRegister(_ context.Context, in *service.AuthRegisterReq) (*service.AuthRegisterRep, error) {
-	tzlog.I("gate 注册 ", in.Address)
+	tzlog.I("gate 注册 %v", in.Address)
 	a.gateBox.Store(in.Address, &gateClient{
 		address:   in.Address,
 		heartUnix: time.Now().Unix(),
@@ -147,7 +147,7 @@ func (a *mAuth) AuthRegister(_ context.Context, in *service.AuthRegisterReq) (*s
 }
 
 func (a *mAuth) AuthDisRegister(_ context.Context, in *service.AuthRegisterReq) (*service.AuthRegisterRep, error) {
-	tzlog.I("gate 注销 ", in.Address)
+	tzlog.I("gate 注销 %v", in.Address)
 	a.gateBox.Delete(in.Address)
 	return &service.AuthRegisterRep{Code: constant.SuccessCode}, nil
 }
@@ -194,6 +194,14 @@ func RegisterAuthHandler(handler IAuth) {
 	defaultAuth.handler = handler
 }
 
+func SetTcpPort(port int) {
+	defaultAuth.TcpPort = port
+}
+
+func SetHttpPort(port int) {
+	defaultAuth.HttpPort = port
+}
+
 func Run() {
 	defaultAuth.Run()
 }
@@ -209,7 +217,7 @@ func (a *mAuth) Run() {
 	}
 	a.beforeRun()
 	go func() {
-		tzlog.I("tcp run ", a.TcpPort)
+		tzlog.I("tcp run %v", a.TcpPort)
 		lis, err := net.Listen("tcp", fmt.Sprintf(":%v", a.TcpPort))
 		if err != nil {
 			fmt.Printf("监听端口失败: %s", err)
@@ -229,7 +237,7 @@ func (a *mAuth) Run() {
 		Addr:    fmt.Sprintf(":%v", a.HttpPort),
 		Handler: a.ginEngine,
 	}
-	tzlog.I("http run ", a.HttpPort)
+	tzlog.I("http run %v", a.HttpPort)
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		tzlog.E("http服务启动异常 %v", err)
 	}
