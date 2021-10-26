@@ -4,8 +4,7 @@ import "github.com/gin-gonic/gin"
 
 type IGate interface {
 	OnMenuRegister(RouteInfo) //路由注册触发
-	GetAdmin(adminId int32) IAdmin
-	GetAuthInfo(ctx *gin.Context) *AuthInfo
+	GetAuthInfo(ctx *gin.Context) IAdmin
 }
 
 type RouteInfo struct {
@@ -13,9 +12,4 @@ type RouteInfo struct {
 	ParentUri string
 	Name      string
 	Desc      string
-}
-
-type AuthInfo struct {
-	AdminId    int32
-	AdminToken string
 }

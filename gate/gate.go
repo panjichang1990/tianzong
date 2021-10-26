@@ -397,7 +397,7 @@ func (g *mGate) Run() {
 		reflection.Register(s)
 		err = s.Serve(lis)
 		if err != nil {
-			fmt.Printf("开启服务失败: %s", err)
+			tzlog.E("开启服务失败: %s", err)
 			return
 		}
 	}()
@@ -421,70 +421,82 @@ func (g *mGate) context() context.Context {
 	return context.Background()
 }
 
-func (g *mGate) checkAuth(ctx *gin.Context) (int, *gateAuth, string) {
+func (g *mGate) checkAuth(admin tianzong.IAdmin, ip string) (int, string) {
 	//sess := session.Get(ctx)
 	//token := helper.GetString(sess.Get(tokenName))
 	//id := helper.GetInt32(sess.Get(idName))
-	authInfo := g.handler.GetAuthInfo(ctx)
-	if authInfo == nil {
-		return constant.NeedLoginCode, nil, constant.NeedLoginMsg
-	}
+
 	//token := ctx.Request.Header.Get(tokenName)
-	if v, ok := g.adminCache.Load(authInfo.AdminId); ok {
+	if v, ok := g.adminCache.Load(admin.GetAdminId()); ok {
 		if info, ok1 := v.(*gateAuth); ok1 {
-			if !info.checkIp(ctx.ClientIP()) {
-				return constant.NeedLoginCode, nil, constant.NeedLoginMsg
+			if !info.checkIp(ip) {
+				return constant.NeedLoginCode, constant.NeedLoginMsg
 			}
-			if !info.checkToken(authInfo.AdminToken) {
-				return constant.NeedLoginCode, nil, constant.NeedLoginMsg
+			if !info.checkToken(admin.GetToken()) {
+				return constant.NeedLoginCode, constant.NeedLoginMsg
 			}
-			return constant.SuccessCode, info, ""
+			admin.SetAdminName(info.adminName)
+			return constant.SuccessCode, ""
 		}
 	}
 	conn := g.getAuthConn()
 	if conn == nil {
-		return constant.SysAuthErr, nil, constant.SysErrMsg
+		return constant.SysAuthErr, constant.SysErrMsg
 	}
 	rep, err := conn.Check(context.Background(), &service.CheckReq{
-		Token:     authInfo.AdminToken,
+		Token:     admin.GetToken(),
 		ProjectId: g.ProjectId,
-		AdminId:   authInfo.AdminId,
+		AdminId:   admin.GetAdminId(),
 		Address:   fmt.Sprintf("%v:%v", g.Host, g.TcpPort),
 	})
 	if err != nil {
 		tzlog.W("鉴权异常 %v", err)
-		return constant.SysAuthErr, nil, constant.SysErrMsg
+		return constant.SysAuthErr, constant.SysErrMsg
 	}
 	if rep.Code != constant.SuccessCode {
-		return constant.AuthCodeErr, nil, rep.Msg
+		return constant.AuthCodeErr, rep.Msg
 	}
-	info := &gateAuth{
+	g.adminCache.Store(admin.GetAdminId(), &gateAuth{
 		adminId:        rep.Data.AdminId,
 		adminName:      rep.Data.AdminName,
-		activeIp:       ctx.ClientIP(),
-		token:          authInfo.AdminToken,
+		activeIp:       ip,
+		token:          admin.GetToken(),
 		lastActiveTime: time.Now().Unix(),
-	}
+	})
+	admin.SetAdminName(rep.Data.AdminName)
 	//_ = sess.Set(idName, id)
 	//_ = sess.Set(tokenName, token)
-	return constant.SuccessCode, info, ""
+	return constant.SuccessCode, constant.SuccessMsg
 }
 
-func (g *mGate) Center(ctx *gin.Context) {
-	checkCode, authInfo, errMsg := g.checkAuth(ctx)
+func (g *mGate) Menu(ctx *gin.Context) {
+	checkCode, errMsg := g.checkAuth(nil, ctx.ClientIP())
 	if checkCode != constant.SuccessCode {
 		ctx.JSON(http.StatusOK, map[string]interface{}{
 			"code": checkCode,
 			"msg":  errMsg,
 		})
+		return
 	}
-	admin := g.handler.GetAdmin(authInfo.adminId)
+	ctx.JSON(http.StatusOK, errMsg)
+
+}
+
+func (g *mGate) Center(ctx *gin.Context) {
+	admin := g.handler.GetAuthInfo(ctx)
 	if admin == nil {
 		ctx.JSON(http.StatusOK, map[string]interface{}{
 			"code": 300,
 			"msg":  "auth err",
 		})
 		return
+	}
+	checkCode, errMsg := g.checkAuth(admin, ctx.ClientIP())
+	if checkCode != constant.SuccessCode {
+		ctx.JSON(http.StatusOK, map[string]interface{}{
+			"code": checkCode,
+			"msg":  errMsg,
+		})
 	}
 	pth := routerPath(ctx.Request.RequestURI)
 	conn := g.getClientConn(pth)
@@ -498,8 +510,8 @@ func (g *mGate) Center(ctx *gin.Context) {
 
 	client := service.NewChildClient(conn)
 	req := g.buildDoReq(ctx)
-	req.AdminId = authInfo.adminId
-	req.AdminName = authInfo.adminName
+	req.AdminId = admin.GetAdminId()
+	req.AdminName = admin.GetAdminName()
 	req.AdminJson = admin.ToJson()
 	rep, err := client.Do(g.context(), req)
 	if err != nil {
