@@ -62,6 +62,7 @@ type IAuthAdmin interface {
 	IsActive() bool
 	CheckProjectPower(projectId int32) bool
 	Logout()
+	GetHeader() string
 }
 
 type IAuth interface {
@@ -120,6 +121,11 @@ func (a *mAuth) Check(_ context.Context, in *service.CheckReq) (*service.CheckRe
 	return &service.CheckRep{
 		Code: constant.SuccessCode,
 		Msg:  constant.SuccessMsg,
+		Data: &service.AdminInfo{
+			AdminId:   admin.GetAdminId(),
+			AdminName: admin.GetAdminName(),
+			Header:    admin.GetHeader(),
+		},
 	}, nil
 }
 
