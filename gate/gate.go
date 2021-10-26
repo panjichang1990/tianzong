@@ -498,6 +498,7 @@ func (g *mGate) Center(ctx *gin.Context) {
 			"code": checkCode,
 			"msg":  errMsg,
 		})
+		return
 	}
 	pth := routerPath(ctx.Request.RequestURI)
 	conn := g.getClientConn(pth)
