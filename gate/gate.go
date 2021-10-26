@@ -204,7 +204,7 @@ func (g *mGate) getClientConn(uri string) *grpc.ClientConn {
 		for _, address := range v {
 			cli := g.getClient(address)
 			if cli != nil {
-				tmpSort = append(tmpSort)
+				tmpSort = append(tmpSort, cli)
 			}
 		}
 		if tmpSort.Len() > 0 {
