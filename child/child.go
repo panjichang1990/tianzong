@@ -144,9 +144,8 @@ func (c *ChildServer) check() {
 				c.register()
 			}
 		}
-		time.AfterFunc(time.Duration(c.CheckInternal)*time.Second, c.check)
 	}
-
+	time.AfterFunc(time.Duration(c.CheckInternal)*time.Second, c.check)
 }
 
 func (c *ChildServer) Run() {
@@ -165,6 +164,7 @@ func (c *ChildServer) Run() {
 		tzlog.E("listen err :%v %v", c.getAddress(), err)
 		return
 	}
+	go c.check()
 	s := grpc.NewServer()
 	service.RegisterChildServer(s, c)
 	reflection.Register(s)
