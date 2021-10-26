@@ -25,6 +25,17 @@ type ChildServer struct {
 	handlers      map[string][]tianzong.HandlerFunc
 }
 
+func (c *ChildServer) registerEvents(topic string, handler func(header map[string]string, body string)) {
+	if c.events == nil {
+		c.events = make(map[string]func(header map[string]string, body string))
+	}
+	if _, ok := c.events[topic]; ok {
+		panic("事件" + topic + "已注册")
+		return
+	}
+	c.events[topic] = handler
+}
+
 type gateAddress struct {
 	address string
 	conn    *grpc.ClientConn

@@ -361,7 +361,8 @@ func (g *mGate) registerToAuth() {
 		return
 	}
 	_, _ = auth.AuthRegister(context.Background(), &service.AuthRegisterReq{
-		Address: g.getAddress(),
+		Address:   g.getAddress(),
+		ProjectId: g.ProjectId,
 	})
 }
 
@@ -593,4 +594,8 @@ func SetTcpPort(port int) {
 //SetAuthAddress 登录服务器地址
 func SetAuthAddress(address string) {
 	defaultGate.authAddress = address
+}
+
+func SetProjectId(projectId int32) {
+	defaultGate.ProjectId = projectId
 }

@@ -12,6 +12,7 @@ service Auth {
 
 message AuthRegisterReq {
   string Address =1;
+  int32 ProjectId = 2;
 }
 
 message AuthRegisterRep{
