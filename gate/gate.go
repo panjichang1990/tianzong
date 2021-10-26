@@ -272,6 +272,7 @@ func (g *mGate) beforeRun() {
 	if g.HttpPort == 0 {
 		g.HttpPort = DefaultHttpPort
 	}
+	g.adminCache = &sync.Map{}
 	g.clientQueue = make(chan *service.RegisterClientReq, g.MsgCacheLen)
 	g.menuQueue = make(chan *service.RegisterMenuReq, g.MsgCacheLen)
 	g.disClientQueue = make(chan string, g.MsgCacheLen)
