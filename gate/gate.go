@@ -516,7 +516,9 @@ func (g *mGate) Center(ctx *gin.Context) {
 	req.AdminId = admin.GetAdminId()
 	req.AdminName = admin.GetAdminName()
 	req.AdminJson = admin.ToJson()
+	req.Uri = pth
 	rep, err := client.Do(g.context(), req)
+
 	if err != nil {
 		tzlog.W("grpc err %v", err)
 		ctx.JSON(http.StatusOK, map[string]interface{}{
