@@ -104,7 +104,7 @@ func (a *mAuth) Check(_ context.Context, in *service.CheckReq) (*service.CheckRe
 			Msg:  "admin no exist",
 		}, nil
 	}
-	if admin.CheckToken(in.Token) {
+	if !admin.CheckToken(in.Token) {
 		return &service.CheckRep{
 			Code: constant.AuthCodeErr,
 			Msg:  "token err",
