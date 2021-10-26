@@ -35,3 +35,7 @@ func (c *ControllerBase) RegisterMethod(router, name, desc string, handler Handl
 		Desc:   desc,
 	}] = handler
 }
+
+func (c *ControllerBase) GetMap() map[routerInfo]HandlerFunc {
+	return c.HandlerMap
+}
