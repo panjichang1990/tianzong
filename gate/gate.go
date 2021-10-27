@@ -527,6 +527,10 @@ var clientErrBack = func(ctx *gin.Context) {
 }
 
 func (g *mGate) Center(ctx *gin.Context) {
+	if ctx.Request.Method == http.MethodOptions {
+		ctx.Abort()
+		return
+	}
 	admin := g.handler.GetAuthInfo(ctx)
 	if admin == nil {
 		authErrBack(ctx)
