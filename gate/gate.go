@@ -529,7 +529,7 @@ var clientErrBack = func(ctx *gin.Context) {
 func (g *mGate) Center(ctx *gin.Context) {
 	admin := g.handler.GetAuthInfo(ctx)
 	if admin == nil {
-
+		authErrBack(ctx)
 		return
 	}
 	checkCode, _ := g.checkAuth(admin, ctx.ClientIP())
