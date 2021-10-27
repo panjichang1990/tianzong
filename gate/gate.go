@@ -485,33 +485,64 @@ func (g *mGate) Menu(ctx *gin.Context) {
 
 }
 
+func RegisterAuthErrBack(f func(ctx *gin.Context)) {
+	if f != nil {
+		authErrBack = f
+	}
+
+}
+
+var authErrBack = func(ctx *gin.Context) {
+	ctx.JSON(http.StatusOK, map[string]interface{}{
+		"code": 300,
+		"msg":  "auth err",
+	})
+}
+
+func RegisterClientErrBack(f func(ctx *gin.Context)) {
+	if f != nil {
+		clientErrBack = f
+	}
+
+}
+
+var grpcErrBack = func(ctx *gin.Context) {
+	ctx.JSON(http.StatusOK, map[string]interface{}{
+		"code": 500,
+		"msg":  "server err",
+	})
+}
+
+func RegisterGrpcErr(f func(ctx *gin.Context)) {
+	if f != nil {
+		grpcErrBack = f
+	}
+}
+
+var clientErrBack = func(ctx *gin.Context) {
+	ctx.JSON(http.StatusOK, map[string]interface{}{
+		"code": 404,
+		"msg":  "no router",
+	})
+}
+
 func (g *mGate) Center(ctx *gin.Context) {
 	admin := g.handler.GetAuthInfo(ctx)
 	if admin == nil {
-		ctx.JSON(http.StatusOK, map[string]interface{}{
-			"code": 300,
-			"msg":  "auth err",
-		})
+
 		return
 	}
-	checkCode, errMsg := g.checkAuth(admin, ctx.ClientIP())
+	checkCode, _ := g.checkAuth(admin, ctx.ClientIP())
 	if checkCode != constant.SuccessCode {
-		ctx.JSON(http.StatusOK, map[string]interface{}{
-			"code": checkCode,
-			"msg":  errMsg,
-		})
+		authErrBack(ctx)
 		return
 	}
 	pth := routerPath(ctx.Request.RequestURI)
 	conn := g.getClientConn(pth)
 	if conn == nil {
-		ctx.JSON(http.StatusOK, map[string]interface{}{
-			"code": 404,
-			"msg":  "no router",
-		})
+		clientErrBack(ctx)
 		return
 	}
-
 	client := service.NewChildClient(conn)
 	req := g.buildDoReq(ctx)
 	req.AdminId = admin.GetAdminId()
@@ -519,13 +550,9 @@ func (g *mGate) Center(ctx *gin.Context) {
 	req.AdminJson = admin.ToJson()
 	req.Uri = pth
 	rep, err := client.Do(g.context(), req)
-
 	if err != nil {
 		tzlog.W("grpc err %v", err)
-		ctx.JSON(http.StatusOK, map[string]interface{}{
-			"code": 500,
-			"msg":  "server err",
-		})
+		grpcErrBack(ctx)
 		return
 	}
 	ctx.Writer.Header().Set("Content-Type", rep.ContentType)
