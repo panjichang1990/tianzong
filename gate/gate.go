@@ -150,6 +150,7 @@ func (g *mGate) RegisterMenu(_ context.Context, in *service.RegisterMenuReq) (*s
 		Msg:  "success",
 	}, nil
 }
+
 func (g *mGate) Ping(_ context.Context, in *service.PingReq) (*service.PingRep, error) {
 	return &service.PingRep{
 		IsRegister: g.setChildHeart(in.Address),
@@ -600,4 +601,9 @@ func SetAuthAddress(address string) {
 
 func SetProjectId(projectId int32) {
 	defaultGate.ProjectId = projectId
+}
+
+func CheckToken(admin tianzong.IAdmin, ip string) bool {
+	code, _ := defaultGate.checkAuth(admin, ip)
+	return code == constant.SuccessCode
 }

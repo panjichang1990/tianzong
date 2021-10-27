@@ -4,7 +4,6 @@ go 1.17
 
 require (
 	github.com/gin-gonic/gin v1.7.4
-	github.com/golang/protobuf v1.5.2
 	github.com/roylee0704/gron v0.0.0-20160621042432-e78485adab46
 	google.golang.org/grpc v1.41.0
 	google.golang.org/protobuf v1.26.0
