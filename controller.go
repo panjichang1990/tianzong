@@ -39,3 +39,11 @@ func (c *ControllerBase) RegisterMethod(router, name, desc string, handler Handl
 func (c *ControllerBase) GetMap() map[routerInfo]HandlerFunc {
 	return c.HandlerMap
 }
+
+func (c *ControllerBase) Prepare(ctx *Context) {
+
+}
+
+func (c *ControllerBase) Finish(ctx *Context) {
+
+}
