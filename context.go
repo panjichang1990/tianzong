@@ -14,6 +14,15 @@ type Context struct {
 	Response *service.DoRep
 	close    chan int
 	context.Context
+	stop bool
+}
+
+func (c *Context) Stop() {
+	c.stop = true
+}
+
+func (c *Context) IsStop() bool {
+	return c.stop
 }
 
 func (c *Context) Query(key string) string {

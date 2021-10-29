@@ -59,11 +59,15 @@ func (c *ChildServer) getAddress() string {
 	return c.address
 }
 
-func (c *ChildServer) Do(ctx context.Context, in *service.DoReq) (*service.DoRep, error) {
+func (c *ChildServer) Do(contextObj context.Context, in *service.DoReq) (*service.DoRep, error) {
 	if v, ok := c.handlers[in.Uri]; ok {
-		ctx := &tianzong.Context{Request: in, Response: &service.DoRep{}, Context: ctx}
+		ctx := &tianzong.Context{Request: in, Response: &service.DoRep{}, Context: contextObj}
 		for _, f := range v {
-			f(ctx)
+			if ctx.IsStop() {
+				break
+			} else {
+				f(ctx)
+			}
 		}
 		return ctx.Response, nil
 	}

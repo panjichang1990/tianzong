@@ -531,6 +531,12 @@ func (g *mGate) Center(ctx *gin.Context) {
 		ctx.Abort()
 		return
 	}
+	ctx1, cancel := context.WithCancel(ctx)
+	go func() {
+		<-ctx.Writer.CloseNotify()
+		cancel()
+	}()
+
 	admin := g.handler.GetAuthInfo(ctx)
 	if admin == nil {
 		authErrBack(ctx)
@@ -553,7 +559,7 @@ func (g *mGate) Center(ctx *gin.Context) {
 	req.AdminName = admin.GetAdminName()
 	req.AdminJson = admin.ToJson()
 	req.Uri = pth
-	rep, err := client.Do(g.context(), req)
+	rep, err := client.Do(ctx1, req)
 	if err != nil {
 		tzlog.W("grpc err %v", err)
 		grpcErrBack(ctx)
