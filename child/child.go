@@ -59,9 +59,9 @@ func (c *ChildServer) getAddress() string {
 	return c.address
 }
 
-func (c *ChildServer) Do(_ context.Context, in *service.DoReq) (*service.DoRep, error) {
+func (c *ChildServer) Do(ctx context.Context, in *service.DoReq) (*service.DoRep, error) {
 	if v, ok := c.handlers[in.Uri]; ok {
-		ctx := &tianzong.Context{Request: in, Response: &service.DoRep{}}
+		ctx := &tianzong.Context{Request: in, Response: &service.DoRep{}, Context: ctx}
 		for _, f := range v {
 			f(ctx)
 		}
