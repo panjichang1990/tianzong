@@ -1,6 +1,7 @@
 package tianzong
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/panjichang1990/tianzong/constant"
 	"github.com/panjichang1990/tianzong/helper"
@@ -12,6 +13,7 @@ type Context struct {
 	Request  *service.DoReq
 	Response *service.DoRep
 	close    chan int
+	context.Context
 }
 
 func (c *Context) Query(key string) string {
