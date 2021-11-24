@@ -2,10 +2,11 @@ package helper
 
 import (
 	"encoding/json"
-	"github.com/panjichang1990/tianzong/tzlog"
 	"runtime/debug"
 	"strconv"
 	"time"
+
+	"github.com/panjichang1990/tianzong/tzlog"
 )
 
 // GetString convert interface to string.
@@ -13,7 +14,8 @@ func GetString(v interface{}) string {
 	if v == nil {
 		return ""
 	}
-	switch v.(type) { //多选语句switch
+	//多选语句switch
+	switch v.(type) {
 	case int32:
 		return strconv.Itoa(int(v.(int32)))
 	case int:

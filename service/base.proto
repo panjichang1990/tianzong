@@ -1,5 +1,5 @@
 syntax = "proto3";
-
+ 
 
 option go_package = "./;service";
 
@@ -9,6 +9,7 @@ message MenuInfo {
   string Name = 2;
   string Desc = 3;
   string ParentUri = 4;
+  map<string,string> Ext = 5;
 }
 
 message PublishInfo {

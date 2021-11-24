@@ -1,9 +1,10 @@
 package mtimer
 
 import (
-	"github.com/roylee0704/gron"
 	"sync"
 	"time"
+
+	"github.com/roylee0704/gron"
 )
 
 type Work struct {

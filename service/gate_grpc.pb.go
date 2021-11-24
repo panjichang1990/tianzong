@@ -23,6 +23,7 @@ type GateClient interface {
 	RegisterMenu(ctx context.Context, in *RegisterMenuReq, opts ...grpc.CallOption) (*RegisterRep, error)
 	Ping(ctx context.Context, in *PingReq, opts ...grpc.CallOption) (*PingRep, error)
 	ClearAuth(ctx context.Context, in *ClearAuthReq, opts ...grpc.CallOption) (*ClearAuthRep, error)
+	Do(ctx context.Context, in *GateDoReq, opts ...grpc.CallOption) (*GateDoRep, error)
 }
 
 type gateClient struct {
@@ -78,6 +79,15 @@ func (c *gateClient) ClearAuth(ctx context.Context, in *ClearAuthReq, opts ...gr
 	return out, nil
 }
 
+func (c *gateClient) Do(ctx context.Context, in *GateDoReq, opts ...grpc.CallOption) (*GateDoRep, error) {
+	out := new(GateDoRep)
+	err := c.cc.Invoke(ctx, "/Gate/Do", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GateServer is the server API for Gate service.
 // All implementations must embed UnimplementedGateServer
 // for forward compatibility
@@ -87,6 +97,7 @@ type GateServer interface {
 	RegisterMenu(context.Context, *RegisterMenuReq) (*RegisterRep, error)
 	Ping(context.Context, *PingReq) (*PingRep, error)
 	ClearAuth(context.Context, *ClearAuthReq) (*ClearAuthRep, error)
+	Do(context.Context, *GateDoReq) (*GateDoRep, error)
 	mustEmbedUnimplementedGateServer()
 }
 
@@ -108,6 +119,9 @@ func (UnimplementedGateServer) Ping(context.Context, *PingReq) (*PingRep, error)
 }
 func (UnimplementedGateServer) ClearAuth(context.Context, *ClearAuthReq) (*ClearAuthRep, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClearAuth not implemented")
+}
+func (UnimplementedGateServer) Do(context.Context, *GateDoReq) (*GateDoRep, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Do not implemented")
 }
 func (UnimplementedGateServer) mustEmbedUnimplementedGateServer() {}
 
@@ -212,6 +226,24 @@ func _Gate_ClearAuth_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Gate_Do_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GateDoReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GateServer).Do(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Gate/Do",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GateServer).Do(ctx, req.(*GateDoReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Gate_ServiceDesc is the grpc.ServiceDesc for Gate service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -238,6 +270,10 @@ var Gate_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ClearAuth",
 			Handler:    _Gate_ClearAuth_Handler,
+		},
+		{
+			MethodName: "Do",
+			Handler:    _Gate_Do_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

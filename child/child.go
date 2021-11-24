@@ -3,18 +3,22 @@ package child
 import (
 	"context"
 	"fmt"
+	"net"
+	"time"
+
 	"github.com/panjichang1990/tianzong"
 	"github.com/panjichang1990/tianzong/constant"
 	"github.com/panjichang1990/tianzong/service"
 	"github.com/panjichang1990/tianzong/tzlog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	"net"
-	"time"
 )
 
 type ChildServer struct {
 	service.ChildServer
+	Name          string
+	Ext           map[string]string
+	GameId        int32
 	GateAddress   []*gateAddress
 	TcpPort       int
 	Host          string
@@ -31,7 +35,6 @@ func (c *ChildServer) registerEvents(topic string, handler func(header map[strin
 	}
 	if _, ok := c.events[topic]; ok {
 		panic("事件" + topic + "已注册")
-		return
 	}
 	c.events[topic] = handler
 }
@@ -95,7 +98,8 @@ func (c *ChildServer) register() {
 		}
 		_, err := gateConn.RegisterClient(context.Background(), &service.RegisterClientReq{
 			Address: c.getAddress(),
-			GameId:  0,
+			Name:    c.Name,
+			Ext:     c.Ext,
 		})
 		if err != nil {
 			tzlog.E("register to gate err: %v", err)
@@ -106,6 +110,9 @@ func (c *ChildServer) register() {
 			Address: c.getAddress(),
 			Data:    c.getRouters(),
 		})
+		if err != nil {
+			tzlog.E("register menu err :%v", err)
+		}
 	}
 
 }
@@ -118,9 +125,11 @@ func (c *ChildServer) getRouters() []*service.MenuInfo {
 	for _, v := range tianzong.ControllerBox {
 		for k, h := range v.GetMap() {
 			router := &service.MenuInfo{
-				Name: k.Name,
-				Desc: k.Desc,
-				Uri:  "/" + v.GetModel() + k.Router,
+				Name:      k.Name,
+				Desc:      k.Desc,
+				Uri:       "/" + v.GetModel() + k.Router,
+				ParentUri: "/" + v.GetModel() + k.ParentUri,
+				Ext:       k.Ext,
 			}
 			res = append(res, router)
 			if _, ok := handlers[router.Uri]; !ok {
@@ -175,9 +184,7 @@ func (c *ChildServer) Run() {
 	err = s.Serve(lis)
 	if err != nil {
 		tzlog.E("open server err: %v", err)
-		return
 	}
-	return
 }
 
 func SetPort(port int) {
@@ -196,4 +203,35 @@ func SetGateAddress(address ...string) {
 
 func Run() {
 	defaultChild.Run()
+}
+
+type GateDoParam struct {
+	Header      map[string]string
+	Param       map[string]string
+	SuccessFunc func(gateAddress string, code int32, msg string, result map[string]string)
+	ErrFunc     func(gateAddress string, err error)
+}
+
+func SendToGate(ctx context.Context, param GateDoParam) {
+	rep := &service.GateDoReq{Header: param.Header, Param: param.Param}
+	for _, address := range defaultChild.GateAddress {
+		gateConn := address.getConn()
+		if gateConn == nil {
+			continue
+		}
+		res, err := gateConn.Do(ctx, rep)
+		if err != nil {
+			param.ErrFunc(address.address, err)
+		} else {
+			param.SuccessFunc(address.address, res.Code, res.Msg, res.Result)
+		}
+	}
+}
+
+func SetName(name string) {
+	defaultChild.Name = name
+}
+
+func SetExt(ext map[string]string) {
+	defaultChild.Ext = ext
 }

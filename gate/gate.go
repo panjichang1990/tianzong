@@ -3,13 +3,6 @@ package gate
 import (
 	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/panjichang1990/tianzong"
-	"github.com/panjichang1990/tianzong/constant"
-	"github.com/panjichang1990/tianzong/service"
-	"github.com/panjichang1990/tianzong/tzlog"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -17,6 +10,16 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/panjichang1990/tianzong"
+	"github.com/panjichang1990/tianzong/constant"
+	"github.com/panjichang1990/tianzong/service"
+	"github.com/panjichang1990/tianzong/tzlog"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 )
 
 //实现网关服务器的通用功能
@@ -45,7 +48,6 @@ type mGate struct {
 	clientQueue    chan *service.RegisterClientReq
 	disClientQueue chan string
 	menuQueue      chan *service.RegisterMenuReq
-	zoneQueue      chan *service.RegisterZoneReq
 
 	//内存缓存部分数据
 	menuTree map[string][]string
@@ -56,12 +58,15 @@ type mGate struct {
 	//tcp监听端口 默认 DefaultTcpPort
 	TcpPort int
 	//http监听端口 默认 DefaultHttpPort
-	HttpPort    int
-	Host        string
-	handler     tianzong.IGate
-	adminCache  *sync.Map
-	authAddress string
-	authConn    *grpc.ClientConn
+	HttpPort            int
+	Host                string
+	handler             tianzong.IGate
+	adminCache          *sync.Map
+	authAddress         string
+	authConn            *grpc.ClientConn
+	OnClientRegister    func(tianzong.ClientInfo)
+	OnClientDisRegister func(tianzong.ClientInfo)
+	OnClientSendToGate  func(header map[string]string, param map[string]string) (code int32, msg string)
 }
 
 func (g *mGate) getAddress() string {
@@ -77,6 +82,8 @@ type childInstance struct {
 	ch        *grpc.ClientConn
 	address   string
 	heartUnix int64
+	name      string
+	ext       map[string]string
 }
 
 type childInstanceArr []*childInstance
@@ -120,6 +127,21 @@ func (g *mGate) RegisterClient(_ context.Context, in *service.RegisterClientReq)
 		Code: 1,
 		Msg:  "success",
 	}, nil
+}
+
+func (g *mGate) Do(_ context.Context, in *service.GateDoReq) (*service.GateDoRep, error) {
+	if g.OnClientSendToGate == nil {
+		return &service.GateDoRep{
+			Code: -1,
+			Msg:  "no func",
+		}, nil
+	} else {
+		code, msg := g.OnClientSendToGate(in.Header, in.Param)
+		return &service.GateDoRep{
+			Code: code,
+			Msg:  msg,
+		}, nil
+	}
 }
 
 func (g *mGate) DisRegisterClient(_ context.Context, in *service.DisRegisterClientReq) (*service.RegisterRep, error) {
@@ -293,6 +315,13 @@ func (g *mGate) beforeRun() {
 				if v, ok := g.clients[c.Address]; !ok || v == nil {
 					g.clients[c.Address] = &childInstance{address: c.Address, heartUnix: time.Now().Unix()}
 				}
+				if g.OnClientRegister != nil {
+					g.OnClientRegister(tianzong.ClientInfo{
+						ClientName: c.Name,
+						Address:    c.Address,
+						Ext:        c.Ext,
+					})
+				}
 				//事件注册
 				for _, v := range c.Events {
 					if _, ok := g.events[v]; !ok {
@@ -307,9 +336,18 @@ func (g *mGate) beforeRun() {
 				}
 			case addr := <-g.disClientQueue:
 				//delete client
-				if _, ok := g.clients[addr]; ok {
+				cli, ok := g.clients[addr]
+				if ok {
+					if g.OnClientDisRegister != nil {
+						g.OnClientDisRegister(tianzong.ClientInfo{
+							ClientName: cli.name,
+							Address:    cli.address,
+							Ext:        cli.ext,
+						})
+					}
 					delete(g.clients, addr)
 				}
+
 				//delete event
 				for k, v := range g.events {
 					for index, vv := range v {
@@ -345,6 +383,7 @@ func (g *mGate) beforeRun() {
 							ParentUri: v.ParentUri,
 							Name:      v.Name,
 							Desc:      v.Desc,
+							Ext:       v.Ext,
 						})
 					}
 				}
@@ -353,6 +392,7 @@ func (g *mGate) beforeRun() {
 		}
 	}()
 	go g.ping()
+	go g.checkClientActive()
 }
 
 func (g *mGate) registerToAuth() {
@@ -416,13 +456,12 @@ func (g *mGate) Run() {
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		tzlog.E("http服务启动异常 %v", err)
 	}
-	return
 }
 
-func (g *mGate) context() context.Context {
-	//r, _ := context.WithTimeout(context.Background(), 60*time.Second)
-	return context.Background()
-}
+// func (g *mGate) context() context.Context {
+// 	//r, _ := context.WithTimeout(context.Background(), 60*time.Second)
+// 	return context.Background()
+// }
 
 func (g *mGate) checkAuth(admin tianzong.IAdmin, ip string) (int, string) {
 	//sess := session.Get(ctx)
@@ -439,6 +478,7 @@ func (g *mGate) checkAuth(admin tianzong.IAdmin, ip string) (int, string) {
 				return constant.NeedLoginCode, constant.NeedLoginMsg
 			}
 			admin.SetAdminName(info.adminName)
+			v.(*gateAuth).setActiveTime()
 			return constant.SuccessCode, ""
 		}
 	}
@@ -533,8 +573,15 @@ func (g *mGate) Center(ctx *gin.Context) {
 	}
 	ctx1, cancel := context.WithCancel(ctx)
 	go func() {
-		<-ctx.Writer.CloseNotify()
-		cancel()
+		for {
+			select {
+			case <-ctx.Writer.CloseNotify():
+				cancel()
+				return
+			case <-ctx.Done():
+				return
+			}
+		}
 	}()
 
 	admin := g.handler.GetAuthInfo(ctx)
@@ -561,7 +608,9 @@ func (g *mGate) Center(ctx *gin.Context) {
 	req.Uri = pth
 	rep, err := client.Do(ctx1, req)
 	if err != nil {
-		tzlog.W("grpc err %v", err)
+		if status.Code(err) != codes.Canceled {
+			tzlog.W("grpc err %v", err)
+		}
 		grpcErrBack(ctx)
 		return
 	}
@@ -571,9 +620,9 @@ func (g *mGate) Center(ctx *gin.Context) {
 
 func (g *mGate) buildDoReq(ctx *gin.Context) *service.DoReq {
 	r := &service.DoReq{
-		Header:   make(map[string]*service.Value, 0),
-		Query:    make(map[string]*service.Value, 0),
-		PostForm: make(map[string]*service.Value, 0),
+		Header:   make(map[string]*service.Value),
+		Query:    make(map[string]*service.Value),
+		PostForm: make(map[string]*service.Value),
 	}
 	for k, v := range ctx.Request.Header {
 		r.Header[k] = &service.Value{V: v}
@@ -643,4 +692,19 @@ func SetProjectId(projectId int32) {
 func CheckToken(admin tianzong.IAdmin, ip string) bool {
 	code, _ := defaultGate.checkAuth(admin, ip)
 	return code == constant.SuccessCode
+}
+
+//RegisterClientSendToGateHandler 注册子服务向网关通信的监听
+func RegisterClientSendToGateHandler(f func(header map[string]string, param map[string]string) (code int32, msg string)) {
+	defaultGate.OnClientSendToGate = f
+}
+
+//RegisterOnClientRegister 注册子服务注册的监听
+func RegisterOnClientRegister(f func(tianzong.ClientInfo)) {
+	defaultGate.OnClientRegister = f
+}
+
+//RegisterOnClientDisRegister 注册子服务注销的监听
+func RegisterOnClientDisRegister(f func(tianzong.ClientInfo)) {
+	defaultGate.OnClientDisRegister = f
 }

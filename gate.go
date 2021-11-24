@@ -12,4 +12,11 @@ type RouteInfo struct {
 	ParentUri string
 	Name      string
 	Desc      string
+	Ext       map[string]string
+}
+
+type ClientInfo struct {
+	ClientName string
+	Address    string
+	Ext        map[string]string
 }

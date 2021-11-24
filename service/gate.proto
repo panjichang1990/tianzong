@@ -3,6 +3,7 @@ syntax = "proto3";
 //protoc   --go_out=. gate.proto
 //protoc --go-grpc_out=. gate.proto
 option go_package = "./;service";
+
 import public "base.proto";
 
 service Gate {
@@ -11,6 +12,18 @@ service Gate {
   rpc RegisterMenu(RegisterMenuReq) returns (RegisterRep){}
   rpc Ping(PingReq) returns(PingRep){}
   rpc ClearAuth(ClearAuthReq) returns (ClearAuthRep){}
+  rpc Do(GateDoReq)returns(GateDoRep){}
+}
+
+message GateDoReq {
+  map<string,string> Header =1;
+  map<string,string> Param =2;
+}
+
+message GateDoRep {
+  int32 Code =1;
+  string Msg = 2;
+  map<string,string> Result =3;
 }
 
 
@@ -40,6 +53,8 @@ message RegisterClientReq {
   int32 GameId =1;
   string Address = 2; //服务器地址
   repeated string Events =4 ;//注册监听事件
+  map<string,string> Ext = 5;
+  string Name = 6;
 }
 
 
@@ -63,45 +78,8 @@ message RegisterZoneReq {
   string ZoneName = 3;
   bool IsGrey = 4 ; //是否是灰度服
 }
-
-
-//注册道具
-message RegisterItemReq {
-  int32 GameId = 1;
-  repeated ItemInfo Data = 2;
-}
-
-//注册商品
-
-message RegisterMallReq {
-  int32 GameId = 1;
-  repeated MallInfo Data = 2;
-}
-
+  
 
 message GetRep {
   int32 GameId =1;
-}
-
-//渠道返回值
-
-message GetChannelRep{
-  int32 Code =1;
-  string Msg = 2;
-  repeated  ChannelInfo Data = 3;
-}
-
-//渠道属性返回
-message GetAttrRep  {
-  int32 Code =1;
-  string Msg = 2;
-  repeated  AttrInfo Data = 3;
-}
-
-//渠道类型返回
-
-message GetTypeRep  {
-  int32 Code =1;
-  string Msg = 2;
-  repeated  TypeInfo Data = 3;
 }

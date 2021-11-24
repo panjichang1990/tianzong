@@ -3,6 +3,7 @@ package tianzong
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/panjichang1990/tianzong/constant"
 	"github.com/panjichang1990/tianzong/helper"
 	"github.com/panjichang1990/tianzong/service"
@@ -12,7 +13,6 @@ import (
 type Context struct {
 	Request  *service.DoReq
 	Response *service.DoRep
-	close    chan int
 	context.Context
 	stop bool
 }
