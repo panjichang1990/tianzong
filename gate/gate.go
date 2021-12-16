@@ -66,7 +66,7 @@ type mGate struct {
 	authConn            *grpc.ClientConn
 	OnClientRegister    func(tianzong.ClientInfo)
 	OnClientDisRegister func(tianzong.ClientInfo)
-	OnClientSendToGate  func(header map[string]string, param map[string]string) (code int32, msg string)
+	OnClientSendToGate  func(header map[string]string, param map[string]string) (code int32, msg string, result map[string]string)
 }
 
 func (g *mGate) getAddress() string {
@@ -136,10 +136,11 @@ func (g *mGate) Do(_ context.Context, in *service.GateDoReq) (*service.GateDoRep
 			Msg:  "no func",
 		}, nil
 	} else {
-		code, msg := g.OnClientSendToGate(in.Header, in.Param)
+		code, msg, result := g.OnClientSendToGate(in.Header, in.Param)
 		return &service.GateDoRep{
-			Code: code,
-			Msg:  msg,
+			Code:   code,
+			Msg:    msg,
+			Result: result,
 		}, nil
 	}
 }
@@ -666,6 +667,7 @@ func RegisterGateWebHandler(handler *gin.Engine) {
 	defaultGate.web = handler
 }
 
+//Run 启动
 func Run() {
 	defaultGate.Run()
 }
@@ -685,17 +687,19 @@ func SetAuthAddress(address string) {
 	defaultGate.authAddress = address
 }
 
+//SetProjectId 设置项目ID
 func SetProjectId(projectId int32) {
 	defaultGate.ProjectId = projectId
 }
 
+//CheckToken 监测Token是否正确
 func CheckToken(admin tianzong.IAdmin, ip string) bool {
 	code, _ := defaultGate.checkAuth(admin, ip)
 	return code == constant.SuccessCode
 }
 
 //RegisterClientSendToGateHandler 注册子服务向网关通信的监听
-func RegisterClientSendToGateHandler(f func(header map[string]string, param map[string]string) (code int32, msg string)) {
+func RegisterClientSendToGateHandler(f func(header map[string]string, param map[string]string) (code int32, msg string, result map[string]string)) {
 	defaultGate.OnClientSendToGate = f
 }
 
