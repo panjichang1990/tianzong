@@ -117,7 +117,7 @@ func (c *ChildServer) register() {
 
 }
 
-var DefaultChild = &ChildServer{}
+var defaultChild = &ChildServer{}
 
 func (c *ChildServer) getRouters() []*service.MenuInfo {
 	res := make([]*service.MenuInfo, 0)
@@ -234,4 +234,8 @@ func SetName(name string) {
 
 func SetExt(ext map[string]string) {
 	defaultChild.Ext = ext
+}
+
+func SetCheckInternal(num int64) {
+	defaultChild.CheckInternal = num
 }

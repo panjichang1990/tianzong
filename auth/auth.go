@@ -83,7 +83,7 @@ func (ma *MAuth) Logout(id int32) {
 	tzlog.I("账号退出 %v", id)
 }
 
-func (a *mAuth) ClearGateCache(id int32, withOut string) {
+func (a *mAuth) clearGateCache(id int32, withOut string) {
 	req := &service.ClearAuthReq{
 		AdminId: id,
 	}
@@ -118,7 +118,7 @@ func (a *mAuth) Check(_ context.Context, in *service.CheckReq) (*service.CheckRe
 			Msg:  "no power",
 		}, nil
 	}
-	a.ClearGateCache(in.AdminId, in.Address)
+	a.clearGateCache(in.AdminId, in.Address)
 	return &service.CheckRep{
 		Code: constant.SuccessCode,
 		Msg:  constant.SuccessMsg,
@@ -140,7 +140,7 @@ func (a *mAuth) Logout(_ context.Context, in *service.LogoutReq) (*service.Logou
 		}, nil
 	}
 	admin.Logout()
-	a.ClearGateCache(in.AdminId, "")
+	a.clearGateCache(in.AdminId, "")
 	return &service.LogoutRep{Code: constant.SuccessCode}, nil
 }
 
@@ -189,6 +189,10 @@ func (a *mAuth) beforeRun() {
 		a.HttpPort = DefaultHttpPort
 	}
 	go a.checkGate()
+}
+
+func ClearAdminWithToken(id int32, withOut string) {
+	defaultAuth.clearGateCache(id, withOut)
 }
 
 var defaultAuth = &mAuth{gateBox: &sync.Map{}}
