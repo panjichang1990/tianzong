@@ -83,7 +83,7 @@ func (ma *MAuth) Logout(id int32) {
 	tzlog.I("账号退出 %v", id)
 }
 
-func (a *mAuth) clearGateCache(id int32, withOut string) {
+func (a *mAuth) ClearGateCache(id int32, withOut string) {
 	req := &service.ClearAuthReq{
 		AdminId: id,
 	}
@@ -118,7 +118,7 @@ func (a *mAuth) Check(_ context.Context, in *service.CheckReq) (*service.CheckRe
 			Msg:  "no power",
 		}, nil
 	}
-	a.clearGateCache(in.AdminId, in.Address)
+	a.ClearGateCache(in.AdminId, in.Address)
 	return &service.CheckRep{
 		Code: constant.SuccessCode,
 		Msg:  constant.SuccessMsg,
@@ -140,7 +140,7 @@ func (a *mAuth) Logout(_ context.Context, in *service.LogoutReq) (*service.Logou
 		}, nil
 	}
 	admin.Logout()
-	a.clearGateCache(in.AdminId, "")
+	a.ClearGateCache(in.AdminId, "")
 	return &service.LogoutRep{Code: constant.SuccessCode}, nil
 }
 
@@ -248,5 +248,4 @@ func (a *mAuth) Run() {
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		tzlog.E("http服务启动异常 %v", err)
 	}
-	return
 }

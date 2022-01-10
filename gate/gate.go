@@ -183,6 +183,7 @@ func (g *mGate) Ping(_ context.Context, in *service.PingReq) (*service.PingRep, 
 
 func (g *mGate) ClearAuth(_ context.Context, in *service.ClearAuthReq) (*service.ClearAuthRep, error) {
 	g.adminCache.Delete(in.GetAdminId())
+
 	return &service.ClearAuthRep{Code: constant.SuccessCode}, nil
 }
 
@@ -448,6 +449,26 @@ func (g *mGate) Run() {
 	if g.web == nil {
 		g.web = gin.New()
 	}
+	g.web.Use(func(ctx *gin.Context) {
+		ctx1, cancel := context.WithCancel(ctx)
+		go func() {
+			defer func() {
+				if v := recover(); v != nil {
+					tzlog.W("recover err %v", v)
+				}
+			}()
+			for {
+				select {
+				case <-ctx.Writer.CloseNotify():
+					cancel()
+					return
+				case <-ctx.Done():
+					return
+				}
+			}
+		}()
+		ctx.Set("Ctx1", ctx1)
+	})
 	g.web.NoRoute(g.Center)
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%v", g.HttpPort),
@@ -572,18 +593,6 @@ func (g *mGate) Center(ctx *gin.Context) {
 		ctx.Abort()
 		return
 	}
-	ctx1, cancel := context.WithCancel(ctx)
-	go func() {
-		for {
-			select {
-			case <-ctx.Writer.CloseNotify():
-				cancel()
-				return
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
 
 	admin := g.handler.GetAuthInfo(ctx)
 	if admin == nil {
@@ -607,7 +616,14 @@ func (g *mGate) Center(ctx *gin.Context) {
 	req.AdminName = admin.GetAdminName()
 	req.AdminJson = admin.ToJson()
 	req.Uri = pth
-	rep, err := client.Do(ctx1, req)
+	ctx1, ok := ctx.Get("Ctx1")
+	var rep *service.DoRep
+	var err error
+	if !ok {
+		rep, err = client.Do(context.Background(), req)
+	} else {
+		rep, err = client.Do(ctx1.(context.Context), req)
+	}
 	if err != nil {
 		if status.Code(err) != codes.Canceled {
 			tzlog.W("grpc err %v", err)

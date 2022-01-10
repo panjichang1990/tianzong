@@ -117,7 +117,7 @@ func (c *ChildServer) register() {
 
 }
 
-var defaultChild = &ChildServer{}
+var DefaultChild = &ChildServer{}
 
 func (c *ChildServer) getRouters() []*service.MenuInfo {
 	res := make([]*service.MenuInfo, 0)

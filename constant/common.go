@@ -17,6 +17,7 @@ const (
 
 const (
 	NeedLoginCode = 2000
+	IpChangeCode      = 2001
 	SuccessCode   = 1
 	ErrNoFondCode = 404
 	SysAuthErr    = 500
